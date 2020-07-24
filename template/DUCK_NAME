@@ -1,0 +1,75 @@
+import { createSlice } from '@reduxjs/toolkit'
+import keyBy from 'lodash'
+import { call, put, takeLatest } from 'redux-saga/effects'
+import API from '../api'
+
+const { actions, reducer } = createSlice({
+  name: '<%= plural.lowercase %>',
+  initialState: {
+    error: false,
+    loading: false,
+    byId: {}
+  },
+  reducers: {
+    REQUEST_<%= singular.uppercase %> (state, { payload }) {
+      state.loading = true
+    },
+    REQUEST_<%= plural.uppercase %> (state, { payload }) {
+      state.loading = true
+    },
+    REQUEST_<%= singular.uppercase %>_SUCCESS (state, { payload }) {
+      state.loading = false
+      if (payload && payload._id){
+        state.byId[payload._id] = payload
+      }
+    },
+    REQUEST_<%= plural.uppercase %>_SUCCESS (state, { payload }) {
+      state.loading = false
+      state.byId = keyBy(payload, '_id')
+    },
+    REQUEST_FAILED (state, { payload }) {
+      state.error = true
+      state.loading = false
+    }
+  }
+})
+
+function * onRequest<%= singular.titlecase %> ({ payload }) {
+  try {
+    const { data } = yield call(
+      API.get, '<%= singular_endpoint %>', {
+        params: payload
+      }
+    )
+    yield put(actions.REQUEST_<%= singular.uppercase %>_SUCCESS(data))
+  } catch (err) {
+    yield put(actions.REQUEST_FAILED({ message: err.message }))
+  }
+}
+
+function * onRequest<%= plural.titlecase %> ({ payload }) {
+  try {
+    const { data } = yield call(
+      API.get, '<%= plural_endpoint %>', {
+        params: payload
+      }
+    )
+    yield put(actions.REQUEST_<%= plural.uppercase %>_SUCCESS(data))
+  } catch (err) {
+    yield put(actions.REQUEST_FAILED({ message: err.message }))
+  }
+}
+
+function * onRequestFailed ({ payload }) {
+  yield call(console.error, payload)
+}
+
+export function * saga () {
+  yield takeLatest('<%= plural.lowercase %>/REQUEST_<%= singular.uppercase %>', onRequest<%= singular.titlecase %>)
+  yield takeLatest('<%= plural.lowercase %>/REQUEST_<%= plural.uppercase %>', onRequest<%= plural.titlecase %>)
+  yield takeLatest('<%= plural.lowercase %>/REQUEST_FAILED', onRequestFailed)
+}
+
+export const { REQUEST_<%= singular.uppercase %>, REQUEST_<%= plural.uppercase %> } = actions
+
+export default reducer
